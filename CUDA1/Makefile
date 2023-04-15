@@ -7,9 +7,8 @@
 ### Last Modified: Nov 2014 WB, WR, LR
 ###
 SDK_INSTALL_PATH := /usr/local/cuda
-NVCC=$/usr/local/cuda/bin/nvcc
-LIB := -L$(SDK_INSTALL_PATH)/lib64 -L$(SDK_INSTALL_PATH)/samples/common/lib/linux/x86_64
-
+NVCC= /usr/local/cuda/bin/nvcc
+LIB := -L$(SDK_INSTALL_PATH)/lib64 
 #INCLUDES  :=  -I$(SDK_INSTALL_PATH)/include -I$(SDK_INSTALL_PATH)/samples/common/inc
 OPTIONS   :=  -O3 
 #--maxrregcount=100 --ptxas-options -v 
