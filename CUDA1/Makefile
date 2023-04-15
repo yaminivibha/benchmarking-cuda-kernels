@@ -6,10 +6,11 @@
 ### Created: 2011-01-27 DVN
 ### Last Modified: Nov 2014 WB, WR, LR
 ###
+SDK_INSTALL_PATH := /cm/shared/apps/cuda11.3/toolkit/11.3.109 NVCC=$(SDK_INSTALL_PATH)/bin/nvcc
 
-SDK_INSTALL_PATH :=  /cm/shared/apps/cuda11.2/toolkit/11.2.2
-NVCC=$(SDK_INSTALL_PATH)/bin/nvcc
-LIB       :=  -L$(SDK_INSTALL_PATH)/lib64 -L$(SDK_INSTALL_PATH)/samples/common/lib/linux/x86_64
+NVCC=$(SDK_INSTALL_PATH)/bin/nvcc 
+LIB := -L$(SDK_INSTALL_PATH)/lib64 -L$(SDK_INSTALL_PATH)/samples/common/lib/linux/x86_64
+
 #INCLUDES  :=  -I$(SDK_INSTALL_PATH)/include -I$(SDK_INSTALL_PATH)/samples/common/inc
 OPTIONS   :=  -O3 
 #--maxrregcount=100 --ptxas-options -v 
