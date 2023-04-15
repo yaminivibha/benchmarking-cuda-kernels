@@ -1,4 +1,3 @@
-
 ///
 /// vecadd.cu
 /// For COMS E6998 Spring 2023
@@ -113,6 +112,7 @@ int main(int argc, char** argv)
 
     // Compute elapsed time 
     stop_timer();
+    double time = elapsed_time();
 
     // Compute floating point operations per second.
     int nFlops = N;
@@ -127,7 +127,7 @@ int main(int argc, char** argv)
 	// Report timing data.
     printf( "Time: %lf (sec), GFlopsS: %lf, GBytesS: %lf\n", 
              time, nGFlopsPerSec, nGBytesPerSec);
-     
+
     // Copy result from device memory to host memory
     error = cudaMemcpy(h_C, d_C, size, cudaMemcpyDeviceToHost);
     if (error != cudaSuccess) Cleanup(false);
@@ -146,7 +146,7 @@ int main(int argc, char** argv)
 
 void Cleanup(bool noError) {  // simplified version from CUDA SDK
     cudaError_t error;
-        
+
     // Free device vectors
     if (d_A)
         cudaFree(d_A);
@@ -162,12 +162,12 @@ void Cleanup(bool noError) {  // simplified version from CUDA SDK
         free(h_B);
     if (h_C)
         free(h_C);
-        
+
     error = cudaDeviceReset();
-    
+
     if (!noError || error != cudaSuccess)
         printf("cuda malloc or cuda thread exit failed \n");
-    
+
     fflush( stdout);
     fflush( stderr);
 
@@ -183,5 +183,3 @@ void checkCUDAError(const char *msg)
       exit(-1);
     }                         
 }
-
-
