@@ -114,6 +114,7 @@ int main(int argc, char** argv)
     // Compute elapsed time 
     stop_timer();
     double time = elapsed_time();
+    printf("Time elapsed: %f seconds\n", time_elapsed);
 
     // Compute floating point operations per second.
     int nFlops = N;
