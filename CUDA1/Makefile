@@ -13,7 +13,7 @@ LIB := -L$(SDK_INSTALL_PATH)/lib64
 OPTIONS   :=  -O3 
 #--maxrregcount=100 --ptxas-options -v 
 
-TAR_FILE_NAME  := YourNameCUDA1.tar
+TAR_FILE_NAME  := yva2002_partA.tar
 EXECS :=  vecadd00 matmult00
 all:$(EXECS)
 

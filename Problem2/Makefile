@@ -19,5 +19,5 @@ tar:
 	tar -cvf $(TAR_FILE_NAME) Makefile *.h *.cu *.pdf *.txt
 
 #######################################################################
-KMillionAddition: KMillionAddition.cc
+KMillionAddition: KMillionAddition.cc 
 	$(CC) $(CFLAGS) $< -o $@
