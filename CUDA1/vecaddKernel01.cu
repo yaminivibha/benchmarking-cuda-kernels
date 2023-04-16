@@ -1,10 +1,10 @@
-__global__ void AddVectors(const float* A, const float* B, float* C, int ValuesPerThread)
-{
-    int N = blockIdx.x * blockDim.x * ValuesPerThread;
-    int tid = blockIdx.x * blockDim.x + threadIdx.x;
-    int threadEndIndex   = tid + N;
-    while (tid < threadEndIndex) {
-        C[tid] = A[tid] + B[tid];
-        tid = tid + blockDim.x * gridDim.x;
+__global__ void vectorSum(const float *A, const float *B, float *C, int size) {
+    int tid = blockDim.x * blockIdx.x + threadIdx.x;
+    int chunk_size = blockDim.x;
+    int chunk_id = blockIdx.x;
+
+    for (int i = chunk_id * chunk_size + threadIdx.x; i < size; i += chunk_size * gridDim.x) {
+        C[i] = A[i] + B[i];
     }
 }
+
