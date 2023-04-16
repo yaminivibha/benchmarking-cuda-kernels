@@ -1,7 +1,6 @@
-#include <stdio.h>
-
-__global__ void AddVectors(const float* A, const float* B, float* C, int N)
+__global__ void AddVectors(const float* A, const float* B, float* C, int ValuesPerThread)
 {
+    int N = blockIdx.x * blockDim.x * ValuesPerThread;
     int tid = blockIdx.x * blockDim.x + threadIdx.x;
     int threadEndIndex   = tid + N;
     while (tid < threadEndIndex) {
