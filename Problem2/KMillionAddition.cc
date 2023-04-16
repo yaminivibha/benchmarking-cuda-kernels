@@ -33,7 +33,8 @@ int main(int argc, char* argv[]) {
   cout << "Runtime: " << duration << " ms" << endl;
   
   // Verify & report result
-    for (int i = 0; i < K_million; ++i) {
+  int i;
+    for (i = 0; i < K_million; ++i) {
         float val = result[i];
         if (fabs(val - K_million) > 1e-5)
             break;
