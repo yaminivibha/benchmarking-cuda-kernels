@@ -27,7 +27,7 @@ int main(int argc, char* argv[]) {
     result[i] = arr1[i] + arr2[i];
   }
   auto end_time = chrono::steady_clock::now();
-  auto duration = chrono::duration_cast<chrono::milliseconds>(end_time - start_time).count();
+  auto duration = chrono::duration_cast<chrono::milliseconds>(end_time - start_time);
   
   // printing result
   cout << "Runtime: " << duration << " ms" << endl;
