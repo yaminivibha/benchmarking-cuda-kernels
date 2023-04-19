@@ -124,7 +124,7 @@ int main(int argc, char* argv[]) {
     double nGFlopsPerSec = nFlopsPerSec*1e-9;
 
 	// Compute transfer rates.
-    int nBytes = 3*4*N; // 2N words in, 1N word out
+    int nBytes = 3*4*K_million; // 2N words in, 1N word out
     double nBytesPerSec = nBytes/time;
     double nGBytesPerSec = nBytesPerSec*1e-9;
 
@@ -137,9 +137,9 @@ int main(int argc, char* argv[]) {
     if (error != cudaSuccess) Cleanup(false);
 
     // Verify & report result
-    for (i = 0; i < N; ++i) {
+    for (i = 0; i < K_million; ++i) {
         float val = h_C[i];
-        if (fabs(val - N) > 1e-5)
+        if (fabs(val - K_million) > 1e-5)
             break;
     }
     printf("Test %s \n", (i == N) ? "PASSED" : "FAILED");
