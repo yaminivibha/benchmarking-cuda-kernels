@@ -31,9 +31,7 @@ int main(int argc, char* argv[]) {
 
   // Tell CUDA how big to make the grid and thread blocks.
   // Since this is a vector addition problem,
-  // grid and thread block are both one-dimensional.
-  dim3 dimGrid(GridWidth);                    
-  dim3 dimBlock(BlockWidth);                 
+  // grid and thread block are both one-dimensional.          
 
     // Allocate input vectors h_A and h_B in host memory
     h_A = (float*)malloc(size);
@@ -63,7 +61,7 @@ int main(int argc, char* argv[]) {
 
   // timing only the addition
   auto start_time = chrono::steady_clock::now();
-  for (int i = 0; i < K_million; i++) {
+  for (i = 0; i < K_million; i++) {
     h_C[i] = h_A[i] + h_B[i];
   }
   auto end_time = chrono::steady_clock::now();

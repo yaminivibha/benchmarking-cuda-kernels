@@ -19,5 +19,14 @@ tar:
 	tar -cvf $(TAR_FILE_NAME) Makefile *.h *.cu *.pdf *.txt
 
 #######################################################################
+
+timer.o : timer.cu timer.h
+	${NVCC} $< -c -o $@ $(OPTIONS)
+
+#######################################################################
+
 KMillionAddition: KMillionAddition.cc 
 	$(CC) $(CFLAGS) $< -o $@
+
+KMillionAdditioncu: KMillionAddition.cu timer.o
+	$(NVCC) $< -o $@ $(OPTIONS)
