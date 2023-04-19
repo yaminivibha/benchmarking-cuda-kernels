@@ -93,13 +93,13 @@ int main(int argc, char* argv[]) {
 
     // Initialize host vectors h_A and h_B
     int i;
-    for(i=0; i<N; ++i){
+    for(i=0; i<K_million; ++i){
      h_A[i] = (float)i;
-     h_B[i] = (float)(N-i);   
+     h_B[i] = (float)(K_million-i);   
     }    
     
     // Warm up
-    AddVectors<<<dimGrid, dimBlock>>>(d_A, d_B, d_C, ValuesPerThread);
+    AddVectors<<<dimGrid, dimBlock>>>(d_A, d_B, d_C, K_million);
     error = cudaGetLastError();
     if (error != cudaSuccess) Cleanup(false);
     cudaDeviceSynchronize();
@@ -109,7 +109,7 @@ int main(int argc, char* argv[]) {
     start_timer();
 
     // Invoke kernel
-    AddVectors<<<dimGrid, dimBlock>>>(d_A, d_B, d_C, ValuesPerThread);
+    AddVectors<<<dimGrid, dimBlock>>>(d_A, d_B, d_C, K_million);
     error = cudaGetLastError();
     if (error != cudaSuccess) Cleanup(false);
     cudaDeviceSynchronize();
