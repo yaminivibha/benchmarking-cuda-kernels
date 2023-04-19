@@ -28,5 +28,8 @@ timer.o : timer.cu timer.h
 KMillionAddition: KMillionAddition.cc 
 	$(CC) $(CFLAGS) $< -o $@
 
-KMillionAdditioncu: KMillionAddition.cu timer.o
-	$(NVCC) $< -o $@ $(OPTIONS)
+AdditionKernel : AdditionKernel.cu
+	${NVCC} $< -c -o $@ $(OPTIONS)
+
+KMillionAdditioncu : KMillionAddition.cu AdditionKernel.h AdditionKernel.o timer.o
+	${NVCC} $< AdditionKernel.o -o $@ $(LIB) timer.o $(OPTIONS)
