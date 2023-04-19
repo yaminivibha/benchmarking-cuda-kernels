@@ -119,7 +119,7 @@ int main(int argc, char* argv[]) {
     double time = elapsed_time();
 
     // Compute floating point operations per second.
-    int nFlops = N;
+    int nFlops = K_million;
     double nFlopsPerSec = nFlops/time;
     double nGFlopsPerSec = nFlopsPerSec*1e-9;
 
