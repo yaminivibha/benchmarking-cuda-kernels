@@ -4,14 +4,13 @@
 /// Instructor: Parajit Dube and Kaoutar El Maghraoui
 /// Based on code from the CUDA Programming Guide
 /// Modified by Wim Bohm and David Newman
+/// Modified by Yamini Ananth
 /// Created: 2011-01-27
-/// Last Modified: 2011-02-23 DVN
 ///
 /// Multiplies two matrices using CUDA: A x B = C
 ///
 /// Copy this file and modify the MatMultKernel device function for
 /// each of your experiments. 
-///
 
 #include "matmultKernel.h"
 #include <stdio.h>
@@ -72,6 +71,7 @@ __global__ void MatMulKernel(Matrix A, Matrix B, Matrix C){
 
     // Do an inproduct of one row of shared_A and one col of shared_B
     // computing one Cvalue by accumulation
+    // Added consideration for other 3 threads
 #pragma unroll
     for(int e=0; e<FOOTPRINT_SIZE; e++){
       Cvalue0 += shared_A[thread_row][e] * shared_B[e][thread_col];
@@ -88,6 +88,7 @@ __global__ void MatMulKernel(Matrix A, Matrix B, Matrix C){
 
   // Write Csub to GLOBAL memory.
   // Each thread writes its own cell value.
+  //Added consideration for other 4 threads
   Csub[thread_row * C.stride + thread_col] = Cvalue0;
   Csub[thread_row * C.stride + thread_col + FOOTPRINT_SIZE/2] = Cvalue1;
   Csub[(thread_row + FOOTPRINT_SIZE/2) * C.stride + thread_col] = Cvalue2;

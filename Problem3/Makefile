@@ -6,8 +6,8 @@ CFLAGS = -std=c++11 -Wall -Wextra -pedantic -O2
 OPTIONS   :=  -O3 
 #--maxrregcount=100 --ptxas-options -v 
 
-TAR_FILE_NAME  := yva2002_partB.tar
-EXECS :=  KMillionAddition KMillionAdditioncu
+TAR_FILE_NAME  := yva2002_partC.tar
+EXECS :=  Convolution
 all:$(EXECS)
 
 #######################################################################
@@ -25,14 +25,5 @@ timer.o : timer.cu timer.h
 
 #######################################################################
 
-KMillionAddition: KMillionAddition.cc 
-	$(CC) $(CFLAGS) $< -o $@
-
-AdditionKernel : AdditionKernel.cu
-	${NVCC} $< -c -o $@ $(OPTIONS)
-
-KMillionAdditioncu : KMillionAddition.cu AdditionKernel.h AdditionKernel.o timer.o
-	${NVCC} $< AdditionKernel.o -o $@ $(LIB) timer.o $(OPTIONS)
-
-KMillionAdditionUnified: KMillionAdditionUnified.cu AdditionKernel.h AdditionKernel.o timer.o
-	${NVCC} $< AdditionKernel.o -o $@ $(LIB) timer.o $(OPTIONS)
+Convolution: Convolution.cu
+	${NVCC} $< -o $@ $(LIB) timer.o $(OPTIONS)
