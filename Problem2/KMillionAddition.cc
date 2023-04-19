@@ -70,7 +70,6 @@ int main(int argc, char* argv[]) {
   cout << "Runtime: " << duration << " s" << endl;
   
   // Verify & report result
-  int i;
     for (i = 0; i < K_million; ++i) {
         float val = h_C[i];
         if (fabs(val - K_million) > 1e-5)
