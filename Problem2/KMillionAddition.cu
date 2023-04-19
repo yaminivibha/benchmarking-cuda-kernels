@@ -142,7 +142,7 @@ int main(int argc, char* argv[]) {
         if (fabs(val - K_million) > 1e-5)
             break;
     }
-    printf("Test %s \n", (i == N) ? "PASSED" : "FAILED");
+    printf("Test %s \n", (i == K_million) ? "PASSED" : "FAILED");
 
     // Clean up and exit.
     Cleanup(true);
