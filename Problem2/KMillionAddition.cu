@@ -20,10 +20,6 @@
 // Namespaces
 using namespace std;
 
-// Defines
-#define GridWidth 60
-#define BlockWidth 128
-
 // Variables for host and device vectors.
 float* h_A; 
 float* h_B; 
@@ -31,6 +27,10 @@ float* h_C;
 float* d_A; 
 float* d_B; 
 float* d_C; 
+
+// Variables for grid and block width
+int GridWidth;
+int BlockWidth;
 
 // Utility Functions
 void Cleanup(bool);
@@ -40,18 +40,34 @@ void checkCUDAError(const char *msg);
 int main(int argc, char* argv[]) {
     int K; // multiple of millions
     int K_million; // vector size
-  
+    int situation; // situation number
+
     // Parse arguments.
-    if (argc != 2) {
-        cerr << "Usage: " << argv[0] << " K" << endl;
+    if (argc != 3) {
+        printf("Usage: %s K Scenario \n", argv[0]);
+        printf("Situtation 1: Using one block with 1 thread \n");
+        printf("Situtation 2: Using one block with 256 threads \n");
+        printf("Situtation 3: Using multiple blocks etc... \n");
         exit(0);
     }
     else {
         sscanf(argv[1], "%d", &K);
+        sscanf(argv[2], "%d", &situation);
         K_million = K * 1000000; 
     }  
 
+    // defining Grid and Block width by situation
+    if (situation == 1){
+        BlockWidth = 1;
+        GridWidth = 1;
+    }
+    else if (situation == 2){
+        BlockWidth = 1;
+        GridWidth = 256;
+    }
+    
     size_t size = K_million * sizeof(float);
+    
     // Tell CUDA how big to make the grid and thread blocks.
     // Since this is a vector addition problem,
     // grid and thread block are both one-dimensional.
@@ -102,7 +118,7 @@ int main(int argc, char* argv[]) {
     stop_timer();
     double time = elapsed_time();
 
-  // Compute floating point operations per second.
+    // Compute floating point operations per second.
     int nFlops = N;
     double nFlopsPerSec = nFlops/time;
     double nGFlopsPerSec = nFlopsPerSec*1e-9;
