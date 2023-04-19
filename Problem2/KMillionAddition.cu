@@ -1,70 +1,135 @@
+///
+/// KMillionAddition.cu
+/// For COMS E6998 Spring 2023
+/// Instructor: Parajit Dube and Kaoutar El Maghraoui
+/// Based on code from the CUDA Programming Guide
+/// Created: 2023-04-17
+/// Add two Vectors A and B in C on GPU using
+/// a kernel defined according to AdditionKernel.h
+/// 
+
+// Includes
 #include <iostream>
 #include <chrono>
 #include <cstdlib> 
 #include <cmath>
-
-// Includes
 #include <stdio.h>
 #include "timer.h"
 #include "AdditionKernel.h"
+
+// Namespaces
+using namespace std;
 
 // Defines
 #define GridWidth 60
 #define BlockWidth 128
 
-     
+// Variables for host and device vectors.
+float* h_A; 
+float* h_B; 
+float* h_C; 
+float* d_A; 
+float* d_B; 
+float* d_C; 
 
-using namespace std;
+// Utility Functions
+void Cleanup(bool);
+void checkCUDAError(const char *msg);
 
+// Host code performs setup and calls the kernel.
 int main(int argc, char* argv[]) {
-  // correcting usage
-  if (argc != 2) {
-    cerr << "Usage: " << argv[0] << " K" << endl;
-    return 1;
-  }
-  const int K = stoi(argv[1]);
-  const int K_million = K * 1000000; 
-  int* arr1 = new int[K_million];
-  int* arr2 = new int[K_million];
-  int* result = new int[K_million];
+    int K; // multiple of millions
+    int K_million; // vector size
+  
+    // Parse arguments.
+    if (argc != 2) {
+        cerr << "Usage: " << argv[0] << " K" << endl;
+        exit(0);
+    }
+    else {
+        sscanf(argv[1], "%d", &K);
+        K_million = K * 1000000; 
+    }  
 
-  dim3 dimGrid(GridWidth);                    
-  dim3 dimBlock(BlockWidth);   
-  for (int i = 0; i < K_million; i++) {
-    arr1[i] = (float)i;
-    arr2[i] = (float)(K_million-i);   
-  }
+    size_t size = K_million * sizeof(float);
+    // Tell CUDA how big to make the grid and thread blocks.
+    // Since this is a vector addition problem,
+    // grid and thread block are both one-dimensional.
+    dim3 dimGrid(GridWidth);                    
+    dim3 dimBlock(BlockWidth);     
+
+    // Allocate input vectors h_A and h_B in host memory
+    h_A = (float*)malloc(size);
+    if (h_A == 0) Cleanup(false);
+    h_B = (float*)malloc(size);
+    if (h_B == 0) Cleanup(false);
+    h_C = (float*)malloc(size);
+    if (h_C == 0) Cleanup(false);
+
+    // Allocate vectors in device memory.
+    cudaError_t error;
+    error = cudaMalloc((void**)&d_A, size);
+    if (error != cudaSuccess) Cleanup(false);
+    error = cudaMalloc((void**)&d_B, size);
+    if (error != cudaSuccess) Cleanup(false);
+    error = cudaMalloc((void**)&d_C, size);
+    if (error != cudaSuccess) Cleanup(false);
+
+    // Initialize host vectors h_A and h_B
+    int i;
+    for(i=0; i<N; ++i){
+     h_A[i] = (float)i;
+     h_B[i] = (float)(N-i);   
+    }    
+    
     // Warm up
     AddVectors<<<dimGrid, dimBlock>>>(d_A, d_B, d_C, ValuesPerThread);
     error = cudaGetLastError();
     if (error != cudaSuccess) Cleanup(false);
     cudaDeviceSynchronize();
 
-  for (int i = 0; i < K_million; i++) {
-    result[i] = arr1[i] + arr2[i];
-  }
-  auto end_time = chrono::steady_clock::now();
-auto duration = chrono::duration_cast<chrono::duration<double>>(end_time - start_time).count();  
-  // printing result
-  cout << "Runtime: " << duration << " s" << endl;
-  
-  // Verify & report result
-  int i;
-    for (i = 0; i < K_million; ++i) {
-        float val = result[i];
-        if (fabs(val - K_million) > 1e-5)
+    // Initialize timer  
+    initialize_timer();
+    start_timer();
+
+    // Invoke kernel
+    AddVectors<<<dimGrid, dimBlock>>>(d_A, d_B, d_C, ValuesPerThread);
+    error = cudaGetLastError();
+    if (error != cudaSuccess) Cleanup(false);
+    cudaDeviceSynchronize();
+
+    // Compute elapsed time 
+    stop_timer();
+    double time = elapsed_time();
+
+  // Compute floating point operations per second.
+    int nFlops = N;
+    double nFlopsPerSec = nFlops/time;
+    double nGFlopsPerSec = nFlopsPerSec*1e-9;
+
+	// Compute transfer rates.
+    int nBytes = 3*4*N; // 2N words in, 1N word out
+    double nBytesPerSec = nBytes/time;
+    double nGBytesPerSec = nBytesPerSec*1e-9;
+
+	// Report timing data.
+    printf( "Time: %lf (sec), GFlopsS: %lf, GBytesS: %lf\n", 
+             time, nGFlopsPerSec, nGBytesPerSec);
+
+    // Copy result from device memory to host memory
+    error = cudaMemcpy(h_C, d_C, size, cudaMemcpyDeviceToHost);
+    if (error != cudaSuccess) Cleanup(false);
+
+    // Verify & report result
+    for (i = 0; i < N; ++i) {
+        float val = h_C[i];
+        if (fabs(val - N) > 1e-5)
             break;
     }
-    if (i == K_million)
-        printf("PASSED\n");
-    else
-        printf("FAILED\n");
+    printf("Test %s \n", (i == N) ? "PASSED" : "FAILED");
 
-  // freeing memory
-  free(arr1);
-  free(arr2);
-  free(result);
-  return 0;
+    // Clean up and exit.
+    Cleanup(true);
 }
 
 void Cleanup(bool noError) {  // simplified version from CUDA SDK

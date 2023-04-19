@@ -1,13 +1,10 @@
 #include <stdio.h>
 
-__global__ void vectorSum(const float *A, const float *B, float *C, int size) {
-    int tid = blockDim.x * blockIdx.x + threadIdx.x;
-    int chunk_size = blockDim.x;
-    int chunk_id = blockIdx.x;
+__global__ void vectorSum(const float *A, const float *B, float *C, int N) {
+    int i = threadIdx.x +blockIdx.x * blockDim.x;
 
-    for (int i = chunk_id * chunk_size + threadIdx.x; i < size; i += chunk_size * gridDim.x) {
-        printf("tid: %d, i: %d\n", tid, i)
+    while(i < N * gridDim.x * blockDim.x){
         C[i] = A[i] + B[i];
+        i += gridDim.x * blockDim.x;
     }
 }
-
