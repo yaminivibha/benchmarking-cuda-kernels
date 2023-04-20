@@ -30,17 +30,6 @@
 #define P 1
 #define OUT_FOOTPRINT 16
 
-typedef struct {
-  int channels;
-  int height;
-  int width;
-  int stride_channel;
-  int stride_height;
-  double* elements;
-} Matrix;
-
-
-
 Matrix MakeDeviceMatrix(const Matrix M, bool copy){
   // Create a new matrix in device memory.
   Matrix newDeviceMatrix;
