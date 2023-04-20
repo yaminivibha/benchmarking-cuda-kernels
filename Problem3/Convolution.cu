@@ -84,7 +84,7 @@ __global__ void ConvKernelTiled(const Matrix input_matrix, const Matrix* filters
   // Load input matrix into shared memory
   #pragma unroll
   for(int c = 0; c < C; c++) {
-    shared_input_matrix[c][x][y] = input_matrixSub[c * input_matrix.input_matrix.height * input_matrix.width + x * input_matrix.width + y];
+    shared_input_matrix[c][x][y] = input_matrixSub[c * input_matrix.height * input_matrix.width + x * input_matrix.width + y];
   }
   // synchronize to make sure the matrix is loaded
   __syncthreads();
