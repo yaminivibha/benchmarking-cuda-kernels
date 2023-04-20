@@ -32,9 +32,6 @@
 #define FOOTPRINT_SIZE BLOCK_SIZE
 #endif
 
-// function declaration for CheckSum
-double checkSum(Matrix M);
-
 // Matrix Structure declaration
 // Matrices have 3 channels (by default)
 // height = y
@@ -56,8 +53,8 @@ Matrix createInputMatrix();
 Matrix createDeviceMatrix(const Matrix M);
 void Copy(const Matrix M, const Matrix newDeviceMatrix);
 Matrix* createFilterMatrices();
+Matrix* createDeviceFilters(const Matrix* filters);
 double checkSum(Matrix M);
-
 
 int main() {
 
@@ -151,6 +148,12 @@ Matrix* createFilterMatrices() {
   }
   return filters;
 }
+// Create filters in device memory.
+Matrix* createDeviceFilters(const Matrix* filters){
+  Matrix* newDeviceFilters;
+  cudaMallocManaged((void**) &newDeviceFilters, K * sizeof(Matrix));
+  return newDeviceFilters;
+}
 
 // Compute and check the checksum of the result matrix
 double checkSum(Matrix M) {
@@ -173,9 +176,9 @@ void Convolution(const Matrix input_matrix, const Matrix* filters, Matrix result
   // Create device data structures.
   Matrix input_matrix_device = createDeviceMatrix(input_matrix);
   Copy(input_matrix, input_matrix_device)
-  Matrix* filters_device = createDeviceFilters(filters, true);
+  Matrix* filters_device = createDeviceFilters(filters);
   Copy(filters, filters_device);
-  Matrix result_device = createDeviceMatrix(result, false);
+  Matrix result_device = createDeviceMatrix(result);
 
   // Set up grid
   dim3 dimBlock(K);
