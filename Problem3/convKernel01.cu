@@ -3,7 +3,7 @@
 // Define a gpu kernel to perform convolution
 // of input_matrix *conv* filters = result.
 
-__global__ void ConvKernel(const Matrix input_matrix, const Matrix* filters, Matrix result){
+__global__ void ConvKernelTiled(const Matrix input_matrix, const Matrix* filters, Matrix result){
   int BlockRow = blockIdx.x;
   int BlockCol = blockIdx.y;
   int k = blockIdx.z;

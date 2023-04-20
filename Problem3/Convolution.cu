@@ -51,6 +51,49 @@ __global__ void ConvKernel(const Matrix input_matrix, const Matrix* filters, Mat
   result.elements[k * result.stride_channel + x * result.stride_height + y] = result_val;
 }
 
+__global__ void ConvKernelTiled(const Matrix input_matrix, const Matrix* filters, Matrix result){
+  int BlockRow = blockIdx.x;
+  int BlockCol = blockIdx.y;
+  int k = blockIdx.z;
+
+  int x = threadIdx.x;
+  int y = threadIdx.y;
+
+  Matrix filter = filters[k];
+
+  double* resultSub = &result.elements[BlockRow * OUT_FOOTPRINT * result.stride_height + BlockCol * OUT_FOOTPRINT];
+  double* input_matrixSub = &input_matrix.elements[BlockRow * OUT_FOOTPRINT * input_matrix.stride_height + BlockCol * OUT_FOOTPRINT];
+  
+  // Shared memory for input matrix
+  __shared__ double shared_input_matrix[C][OUT_FOOTPRINT + 2 * P][OUT_FOOTPRINT + 2 * P];
+
+  // Load input matrix into shared memory
+  #pragma unroll
+  for(int c = 0; c < C; c++) {
+    shared_input_matrix[c][x][y] = input_matrixSub[c * input_matrix.stride_channel + x * input_matrix.stride_height + y];
+  }
+  // synchronize to make sure the matrix is loaded
+  __syncthreads();
+   // verify if the thread is inside the footprint
+  if(x < P || x >= OUT_FOOTPRINT + P || y < P || y >= OUT_FOOTPRINT + P) {
+    return;
+  }
+  // calculate the new x and y
+  int new_x = x - P;
+  int new_y = y - P;
+  // calculate the result
+  double result_val = 0;
+  for(int c = 0; c < C; c++) {
+    for(int j = 0; j < FH; j++) {
+      for(int i = 0; i < FW; i++) {
+        result_val += filter.elements[c * filter.stride_channel + (FH - 1 - i) * filter.stride_height + (FW - 1 - j)] * shared_input_matrix[c][new_x + i][new_y + j];
+      }
+    }
+  }
+  // store the result
+  resultSub[k * result.stride_channel + new_x * result.stride_height + new_y] = result_val;
+}
+
 Matrix createDeviceMatrix(const Matrix M, bool copy){
   Matrix newDeviceMatrix;
   newDeviceMatrix.channels = M.channels;
@@ -192,6 +235,54 @@ void Conv(const Matrix input_matrix, const Matrix* filters, Matrix result){
   cudaFree(result_device.elements);
 }
 
+// Host code for convolution - tiled
+void ConvTiled(const Matrix input_matrix, const Matrix* filters, Matrix result){
+
+  // Create device data structures.
+  Matrix input_matrix_device = createDeviceMatrix(input_matrix, true);
+  Matrix* filters_device = createDeviceFilters(filters, true);
+  Matrix result_device = createDeviceMatrix(result, false);
+
+  // Define grid topology
+  dim3 dimBlock(OUT_FOOTPRINT + 2 * P, OUT_FOOTPRINT + 2 * P);
+  dim3 dimGrid(H / OUT_FOOTPRINT, W / OUT_FOOTPRINT, K);
+
+  // Invoke kernel for warm up
+  ConvKernelTiled<<<dimGrid, dimBlock>>>(input_matrix_device, filters_device, result_device);
+
+  // Synchronize to make sure everyone is done in the warmup.
+  cudaThreadSynchronize();
+
+  // Set up timer
+  initialize_timer();
+  start_timer();
+
+  // Invoke kernel
+  ConvKernelTiled<<<dimGrid, dimBlock>>>(input_matrix_device, filters_device, result_device);
+ 
+  // Synchronize to make sure everyone is done.
+  cudaThreadSynchronize() ;
+
+  // Compute and report the timing results
+
+  stop_timer();
+  double time = elapsed_time();
+
+  printf("C2\n");
+  double checksum;
+  checksum = checkSum(result);
+  printf( "Checksum: %f Time: %lf (sec)\n", checksum, time);
+  size_t size = result.channels * result.height * result.width * sizeof(double);
+  cudaMemcpy(result.elements, result_device.elements, size, cudaMemcpyDeviceToHost);
+
+  // Free device memory
+  cudaFree(input_matrix_device.elements);
+  for(int k = 0; k < K; k++) {
+    cudaFree(filters_device[k].elements);
+  }
+  cudaFree(filters_device);
+  cudaFree(result_device.elements);
+}
 
 int main() {
 

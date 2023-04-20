@@ -133,7 +133,7 @@ void checkResult(Matrix M) {
 }
 
 // Host code for convolution.
-void Conv(const Matrix input_matrix, const Matrix* filters, Matrix result){
+void ConvTiled(const Matrix input_matrix, const Matrix* filters, Matrix result){
 
   // Create device data structures.
   Matrix input_matrix_device = MakeDeviceMatrix(input_matrix, true);
@@ -154,8 +154,8 @@ void Conv(const Matrix input_matrix, const Matrix* filters, Matrix result){
   initialize_timer();
   start_timer();
 
-  // Invoke kernel for real
-  ConvKernel<<<dimGrid, dimBlock>>>(input_matrix_device, filters_device, result_device);
+  // Invoke kernel
+  ConvKernelTiled<<<dimGrid, dimBlock>>>(input_matrix_device, filters_device, result_device);
  
   // Synchronize to make sure everyone is done.
   cudaThreadSynchronize() ;
