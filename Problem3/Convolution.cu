@@ -165,7 +165,7 @@ void Conv(const Matrix input_matrix, const Matrix* filters, Matrix result){
 
   stop_timer();
   double time = elapsed_time();
-  printf("C1")
+  printf("C1");
   printf( "Grid Dimensions: %dx%d \n",dimGrid.x,dimGrid.y);
   printf( "Block Dimensions: %dx%d \n",dimBlock.x,dimBlock.y);
   
@@ -203,7 +203,7 @@ int main(int argc, char** argv) {
 
   // Verify that the result is correct.
   checksum = checkResult(result);
-  printf("checksum: %d\n", checksum)
+  printf("checksum: %d\n", checksum);
   // Free allocated memory.
   free(input_matrix.elements);
   for(int k = 0; k < K; k++) {
