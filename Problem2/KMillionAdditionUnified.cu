@@ -38,6 +38,7 @@ int main(int argc, char* argv[]) {
     int K; // multiple of millions
     double K_million; // vector size
     int situation; // situation number
+    int ValuesPerThread; // number of values per thread
 
     // Parse arguments.
     if (argc != 3) {
@@ -153,7 +154,7 @@ int main(int argc, char* argv[]) {
     printf("Vector size: %f\n", K_million);
     // Verify & report result
     for (i = 0; i < K_million; ++i) {
-        float val = h_C[i];
+        float val = d_C[i];
         if (fabs(val - K_million) > 1e-5)
             break;
     }

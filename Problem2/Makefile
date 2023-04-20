@@ -7,7 +7,7 @@ OPTIONS   :=  -O3
 #--maxrregcount=100 --ptxas-options -v 
 
 TAR_FILE_NAME  := yva2002_partB.tar
-EXECS :=  KMillionAddition KMillionAdditioncu
+EXECS :=  KMillionAddition KMillionAdditioncu KMillionAdditionUnified
 all:$(EXECS)
 
 #######################################################################
