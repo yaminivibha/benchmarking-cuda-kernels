@@ -32,7 +32,26 @@
 // to the element in the same column but one row down.
 
 
+#define C 3
+#define H 1024
+#define W 1024
+#define K 64
+#define FH 3
+#define FW 3
+#define P 1
+#define OUT_FOOTPRINT 16
 
+typedef struct {
+  int channels;
+  int height;
+  int width;
+  int stride_channel;
+  int stride_height;
+  double* elements;
+} Matrix;
+
+// Forward declaration of the kernel function that performs the work.
+__global__ void ConvKernel(const Matrix, const Matrix*, Matrix);
 
 #endif
 
