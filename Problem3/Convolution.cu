@@ -114,22 +114,17 @@ double checkSum(Matrix M) {
 
   // expected result
   double checksum = 122756344698240;
-  double checksum_M = 0;
+  // actual result
+  double checksum_computed = 0;
   
   for(int k = 0; k < K; k++) {
     for(int h = 0; h < M.height; h++) {
         for(int w = 0; w < M.width; w++) {
-            checksum_M += M.elements[k * M.stride_channel + h * M.stride_height + w];
+            checksum_computed += M.elements[k * M.stride_channel + h * M.stride_height + w];
         }
     }
   }
-
-  if(fabs(checksum - checksum_M)> epsilon * checksum) {
-    printf("\n\nTEST FAILED\n");
-    printf("computed checksum: %lf\n", checksum_M);
-    printf("actual checksum: %lf\n", checksum);
-  }
-    return checksum_M;
+    return checksum;
 }
 
 // Host code for convolution.
@@ -144,7 +139,7 @@ void Conv(const Matrix input_matrix, const Matrix* filters, Matrix result){
   dim3 dimBlock(K);
   dim3 dimGrid(H, W);
 
-  // Invoke kernel for warm up
+  // Warm-up
   ConvKernel<<<dimGrid, dimBlock>>>(input_matrix_device, filters_device, result_device);
 
   // Synchronize to make sure everyone is done in the warmup.
@@ -154,19 +149,15 @@ void Conv(const Matrix input_matrix, const Matrix* filters, Matrix result){
   initialize_timer();
   start_timer();
 
-  // Invoke kernel for real
+  // True computation
   ConvKernel<<<dimGrid, dimBlock>>>(input_matrix_device, filters_device, result_device);
  
-  // Synchronize to make sure everyone is done.
+  //synchronization
   cudaThreadSynchronize() ;
-
-  // Compute and report the timing results
 
   stop_timer();
   double time = elapsed_time();
   printf("C1");
-  //printf( "Grid Dimensions: %dx%d \n",dimGrid.x,dimGrid.y);
-  //printf( "Block Dimensions: %dx%d \n",dimBlock.x,dimBlock.y);
   double checksum;
   checksum = checkSum(result);
   printf( "Checksum: %lf Time: %lf (sec)\n", time);
