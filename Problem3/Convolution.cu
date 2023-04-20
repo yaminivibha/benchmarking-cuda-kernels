@@ -21,6 +21,75 @@
 // Defines
 #define epsilon (float)1e-4
 #define verbose 0
+#define C 3
+#define H 1024
+#define W 1024
+#define K 64
+#define FH 3
+#define FW 3
+#define P 1
+#define OUT_FOOTPRINT 16
+
+typedef struct {
+  int channels;
+  int height;
+  int width;
+  int stride_channel;
+  int stride_height;
+  double* elements;
+} Matrix;
+
+// Function declarations
+__global__ void ConvKernel(const Matrix, const Matrix*, Matrix);
+Matrix MakeDeviceMatrix(const Matrix M, bool copy);
+Matrix* MakeDeviceFilters(const Matrix* filters, bool copy);
+Matrix MakeHostMatrix(int channels, int height, int width);
+Matrix createIMatrix();
+Matrix* createFilterMatrices() 
+Matrix createResultMatrix();
+Matrix createIMatrix();
+double checkResult(Matrix result);
+
+__global__ void ConvKernel(const Matrix input_matrix, const Matrix* filters, Matrix result){
+  int block_row = blockIdx.x;
+  int block_col = blockIdx.y;
+  int k = blockIdx.z;
+
+  int x = threadIdx.x;
+  int y = threadIdx.y;
+
+  Matrix filter = filters[k];
+
+  double* resultSub = &result.elements[block_row * OUT_FOOTPRINT * result.stride_height + block_col * OUT_FOOTPRINT];
+  double* input_matrixSub = &input_matrix.elements[block_row * OUT_FOOTPRINT * input_matrix.stride_height + block_col * OUT_FOOTPRINT];
+  
+  __shared__ double shared_input_matrix[C][OUT_FOOTPRINT + 2 * P][OUT_FOOTPRINT + 2 * P];
+
+  #pragma unroll
+  for(int c = 0; c < C; c++) {
+    shared_input_matrix[c][x][y] = input_matrixSub[c * input_matrix.stride_channel + x * input_matrix.stride_height + y];
+  }
+
+  __syncthreads();
+
+  if(x < P || x >= OUT_FOOTPRINT + P || y < P || y >= OUT_FOOTPRINT + P) {
+    return;
+  }
+
+  int new_x = x - P;
+  int new_y = y - P;
+
+  double result_val = 0;
+  for(int c = 0; c < C; c++) {
+    for(int j = 0; j < FH; j++) {
+      for(int i = 0; i < FW; i++) {
+        result_val += filter.elements[c * filter.stride_channel + (FH - 1 - i) * filter.stride_height + (FW - 1 - j)] * shared_input_matrix[c][new_x + i][new_y + j];
+      }
+    }
+  }
+
+  resultSub[k * result.stride_channel + new_x * result.stride_height + new_y] = result_val;
+}
 
 
 Matrix MakeDeviceMatrix(const Matrix M, bool copy){
@@ -38,8 +107,8 @@ Matrix MakeDeviceMatrix(const Matrix M, bool copy){
   return newDeviceMatrix;
 }
 
+// Create a new matrix in device memory.
 Matrix* MakeDeviceFilters(const Matrix* filters, bool copy){
-  // Create a new matrix in device memory.
   Matrix* newDeviceFilters;
   cudaMallocManaged((void**) &newDeviceFilters, K * sizeof(Matrix));
   if(copy) {
@@ -99,20 +168,9 @@ Matrix* createFilterMatrices() {
   return filters;
 }
 
-// Print channel 0 of a matrix stored in host memory.
-void printMatrix0(Matrix M, const char* name) {
-  printf("\n%s \n",name);
-  for(int y=0; y<M.height; y++){
-   for(int x=0; x<M.width; x++) {
-      printf("%f ", M.elements[y * M.width + x]);
-   }
-   printf("\n");
-  }
-}
-
 // Compute and check the checksum of the result matrix
 // expected to be 122756344698240
-int checkResult(Matrix M) {
+double checkResult(Matrix M) {
 
   double checksum = 122756344698240;
   double checksum_M = 0;
@@ -186,14 +244,16 @@ void Conv(const Matrix input_matrix, const Matrix* filters, Matrix result){
 
 //
 // main
-//
-int main(int argc, char** argv) {
+
+
+
+int main() {
 
   // Create matrices in host.
   Matrix input_matrix = createIMatrix();
   Matrix* filters = createFilterMatrices();
   Matrix result = MakeHostMatrix(K, H, W);
-  int checksum;
+  double checksum;
 
   // Perform CUDA matrix Multiplication
   // MatMul is a host function that calls
@@ -203,7 +263,7 @@ int main(int argc, char** argv) {
 
   // Verify that the result is correct.
   checksum = checkResult(result);
-  printf("checksum: %d\n", checksum);
+  printf("checksum: %lf\n", checksum);
   // Free allocated memory.
   free(input_matrix.elements);
   for(int k = 0; k < K; k++) {
