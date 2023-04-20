@@ -24,6 +24,14 @@ timer.o : timer.cu timer.h
 	${NVCC} $< -c -o $@ $(OPTIONS)
 
 #######################################################################
+convKernel00.o : convKernel00.cu
+	${NVCC} $< -c -o $@ $(OPTIONS)
 
+convKernel01.o : convKernel01.cu
+	${NVCC} $< -c -o $@ $(OPTIONS)
+	
 Convolution: Convolution.cu timer.o
 	${NVCC} $< -o $@ $(LIB) timer.o $(OPTIONS)
+
+conv_tiled : conv_tiled.cu convKernel.h convKernel01.o timer.o
+	${NVCC} $< convKernel01.o -o $@ $(LIB) timer.o $(OPTIONS)
