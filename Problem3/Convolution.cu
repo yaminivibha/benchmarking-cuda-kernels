@@ -201,7 +201,7 @@ double checkSum(Matrix M) {
         }
     }
   }
-    return checksum;
+    return checksum_computed;
 }
 
 // Host code for convolution.
