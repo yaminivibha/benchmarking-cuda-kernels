@@ -12,7 +12,6 @@
 // Includes
 #include <stdio.h>
 #include "timer.h"
-#include "convKernel.h"
 
 // Defines
 #define C 3
