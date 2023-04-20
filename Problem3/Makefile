@@ -25,5 +25,5 @@ timer.o : timer.cu timer.h
 
 #######################################################################
 
-Convolution: Convolution.cu
+Convolution: Convolution.cu timer.o
 	${NVCC} $< -o $@ $(LIB) timer.o $(OPTIONS)
