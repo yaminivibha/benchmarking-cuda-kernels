@@ -7,7 +7,7 @@ OPTIONS   :=  -O3
 #--maxrregcount=100 --ptxas-options -v 
 
 TAR_FILE_NAME  := yva2002_partC.tar
-EXECS :=  Convolution Convolution_tiled Convolution_cudnn
+EXECS :=  Convolution
 all:$(EXECS)
 
 #######################################################################
