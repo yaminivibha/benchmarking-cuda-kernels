@@ -46,6 +46,19 @@ typedef struct {
   double* elements;
 } Matrix;
 
+//Declaring functions
+__global__ void ConvKernelTiled(const Matrix input_matrix, const Matrix* filters, Matrix result);
+__global__ void ConvKernel(const Matrix input_matrix, const Matrix* filters, Matrix result);
+void ConvTiled(const Matrix input_matrix, const Matrix* filters, Matrix result);
+void Convolution(const Matrix input_matrix, const Matrix* filters, Matrix result);
+Matrix createHostMatrix(int channels, int height, int width);
+Matrix createInputMatrix();
+Matrix createDeviceMatrix(const Matrix M);
+void Copy(const Matrix M, const Matrix newDeviceMatrix);
+Matrix* createFilterMatrices();
+double checkSum(Matrix M);
+
+
 int main() {
 
   // Create matrices in host.
