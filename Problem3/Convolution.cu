@@ -7,11 +7,7 @@
 /// Created: 2011-01-27
 /// Last Modified: 2011-02-19 DVN
 ///
-/// Do not modify this file. The GTA will grade your
-/// code using the master copy of this file, not your
-/// copy, so any modifications you make will not play
-/// a role in the grading.
-///
+/// Yamini Ananth
 
 // Includes
 #include <stdio.h>
@@ -33,8 +29,29 @@
 // function declaration
 double checkSum(Matrix M);
 
-Matrix MakeDeviceMatrix(const Matrix M, bool copy){
-  // Create a new matrix in device memory.
+__global__ void ConvKernel(const Matrix input_matrix, const Matrix* filters, Matrix result){
+  // total K * H * W threads
+  // each thread computes one output pixel at resuls[k, x, y]
+  int x = blockIdx.x;
+  int y = blockIdx.y;
+  int k = threadIdx.x;
+  Matrix filter = filters[k];
+
+  double result_val = 0;
+  // Convolution
+  // for each channel, do convolution. Convolution defined as sum of element-wise multiplication of filter and input matrix
+  for(int c = 0; c < C; c++) {
+    for(int j = 0; j < FH; j++) {
+      for(int i = 0; i < FW; i++) {
+        result_val += filter.elements[c * filter.stride_channel + (FH - 1 - i) * filter.stride_height + (FW - 1 - j)] * input_matrix.elements[c * input_matrix.stride_channel + (x + i) * input_matrix.stride_height + (y + j)];
+      }
+    }
+  }
+    // Indexing into the result
+  result.elements[k * result.stride_channel + x * result.stride_height + y] = result_val;
+}
+
+Matrix createDeviceMatrix(const Matrix M, bool copy){
   Matrix newDeviceMatrix;
   newDeviceMatrix.channels = M.channels;
   newDeviceMatrix.height = M.height;
@@ -49,12 +66,12 @@ Matrix MakeDeviceMatrix(const Matrix M, bool copy){
 }
 
 // Create a new matrix in device memory.
-Matrix* MakeDeviceFilters(const Matrix* filters, bool copy){
+Matrix* createDeviceFilters(const Matrix* filters, bool copy){
   Matrix* newDeviceFilters;
   cudaMallocManaged((void**) &newDeviceFilters, K * sizeof(Matrix));
   if(copy) {
     for(int k = 0; k < K; k++) {
-        newDeviceFilters[k] = MakeDeviceMatrix(filters[k], copy);
+        newDeviceFilters[k] = createDeviceMatrix(filters[k], copy);
     }
   }
   
@@ -62,7 +79,7 @@ Matrix* MakeDeviceFilters(const Matrix* filters, bool copy){
 }
 
 // Create a matrix in host memory.
-Matrix MakeHostMatrix(int channels, int height, int width){
+Matrix createHostMatrix(int channels, int height, int width){
   Matrix newHostMatrix;
   newHostMatrix.channels = channels;
   newHostMatrix.height = height;
@@ -76,7 +93,7 @@ Matrix MakeHostMatrix(int channels, int height, int width){
 
 // Create input matrix stored in host memory.
 Matrix createIMatrix() {
-  Matrix input_matrix = MakeHostMatrix(C, H + 2 * P, W + 2 * P);
+  Matrix input_matrix = createHostMatrix(C, H + 2 * P, W + 2 * P);
   for(int c = 0; c < input_matrix.channels; c++) {
     for(int h = 0; h < input_matrix.height; h++) {
         for(int w = 0; w < input_matrix.width; w++) {
@@ -96,7 +113,7 @@ Matrix createIMatrix() {
 Matrix* createFilterMatrices() {
   Matrix* filters = (Matrix*) malloc(K * sizeof(Matrix));
   for(int k = 0; k < K; k++) {
-    Matrix filter = MakeHostMatrix(C, FH, FW);
+    Matrix filter = createHostMatrix(C, FH, FW);
     for(int c = 0; c < filter.channels; c++) {
         for(int h = 0; h < filter.height; h++) {
             for(int w = 0; w < filter.width; w++) {
@@ -131,9 +148,9 @@ double checkSum(Matrix M) {
 void Conv(const Matrix input_matrix, const Matrix* filters, Matrix result){
 
   // Create device data structures.
-  Matrix input_matrix_device = MakeDeviceMatrix(input_matrix, true);
-  Matrix* filters_device = MakeDeviceFilters(filters, true);
-  Matrix result_device = MakeDeviceMatrix(result, false);
+  Matrix input_matrix_device = createDeviceMatrix(input_matrix, true);
+  Matrix* filters_device = createDeviceFilters(filters, true);
+  Matrix result_device = createDeviceMatrix(result, false);
 
   // Define grid topology
   dim3 dimBlock(K);
@@ -181,7 +198,7 @@ int main() {
   // Create matrices in host.
   Matrix input_matrix = createIMatrix();
   Matrix* filters = createFilterMatrices();
-  Matrix result = MakeHostMatrix(K, H, W);
+  Matrix result = createHostMatrix(K, H, W);
 
   // Perform CUDA matrix Multiplication
   // MatMul is a host function that calls

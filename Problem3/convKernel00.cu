@@ -1,6 +1,6 @@
 #include "convKernel.h"
 
-// Define a gpu kernel to perform convolution
+// GPU kernel to perform convolution
 // of input_matrix *conv* filters = result.
 __global__ void ConvKernel(const Matrix input_matrix, const Matrix* filters, Matrix result){
   // total K * H * W threads
@@ -11,6 +11,8 @@ __global__ void ConvKernel(const Matrix input_matrix, const Matrix* filters, Mat
   Matrix filter = filters[k];
 
   double result_val = 0;
+  // Convolution
+  // for each channel, do convolution. Convolution defined as sum of element-wise multiplication of filter and input matrix
   for(int c = 0; c < C; c++) {
     for(int j = 0; j < FH; j++) {
       for(int i = 0; i < FW; i++) {
@@ -18,7 +20,7 @@ __global__ void ConvKernel(const Matrix input_matrix, const Matrix* filters, Mat
       }
     }
   }
-
+    // Indexing into the result
   result.elements[k * result.stride_channel + x * result.stride_height + y] = result_val;
 }
 
