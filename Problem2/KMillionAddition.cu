@@ -6,7 +6,6 @@
 /// Created: 2023-04-17
 /// Add two Vectors A and B in C on GPU using
 /// a kernel defined according to AdditionKernel.h
-/// 
 
 // Includes
 #include <iostream>
@@ -31,7 +30,7 @@ float* d_C;
 // Variables for grid and block width
 int GridWidth;
 int BlockWidth;
-
+int ValuesPerThread;
 // Utility Functions
 void Cleanup(bool);
 void checkCUDAError(const char *msg);
@@ -44,28 +43,45 @@ int main(int argc, char* argv[]) {
 
     // Parse arguments.
     if (argc != 3) {
-        printf("Usage: %s K Scenario \n", argv[0]);
+        printf("Usage: %s K Situtaion \n", argv[0]);
         printf("Situtation 1: Using one block with 1 thread \n");
         printf("Situtation 2: Using one block with 256 threads \n");
         printf("Situtation 3: Using multiple blocks etc... \n");
         exit(0);
     }
+    
     else {
         sscanf(argv[1], "%d", &K);
         sscanf(argv[2], "%d", &situation);
         K_million = K * 1000000; 
     }  
 
+
+    if(K_million % 256 != 0){
+     printf("Error: K*1 000 000 must be multiple of 256.\n");
+     exit(0);
+    }
     // defining Grid and Block width by situation
+    
     if (situation == 1){
         BlockWidth = 1;
         GridWidth = 1;
+        ValuesPerThread = K_million;
     }
     else if (situation == 2){
         BlockWidth = 1;
         GridWidth = 256;
+        ValuesPerThread = K_million/256;
     }
-    
+    else if (situation == 3){
+        BlockWidth = K_million / 256;
+        GridWidth = 256;
+        ValuesPerThread = 1;
+    }
+    else{
+        printf("Error: Situation must be 1, 2 or 3.\n");
+        exit(0);
+    }
     size_t size = K_million * sizeof(float);
     
     // Tell CUDA how big to make the grid and thread blocks.
@@ -99,7 +115,7 @@ int main(int argc, char* argv[]) {
     }    
     
     // Warm up
-    AddVectors<<<dimGrid, dimBlock>>>(d_A, d_B, d_C, K_million);
+    AddVectors<<<dimGrid, dimBlock>>>(d_A, d_B, d_C, ValuesPerThread);
     error = cudaGetLastError();
     if (error != cudaSuccess) Cleanup(false);
     cudaDeviceSynchronize();
@@ -109,7 +125,7 @@ int main(int argc, char* argv[]) {
     start_timer();
 
     // Invoke kernel
-    AddVectors<<<dimGrid, dimBlock>>>(d_A, d_B, d_C, K_million);
+    AddVectors<<<dimGrid, dimBlock>>>(d_A, d_B, d_C, ValuesPerThread);
     error = cudaGetLastError();
     if (error != cudaSuccess) Cleanup(false);
     cudaDeviceSynchronize();
