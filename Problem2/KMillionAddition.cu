@@ -38,12 +38,12 @@ void checkCUDAError(const char *msg);
 // Host code performs setup and calls the kernel.
 int main(int argc, char* argv[]) {
     int K; // multiple of millions
-    int K_million; // vector size
+    int K_million; // K*1 000 000
     int situation; // situation number
 
     // Parse arguments.
     if (argc != 3) {
-        printf("Usage: %s K Situtaion \n", argv[0]);
+        printf("Usage: %s <K> <Situation> \n", argv[0]);
         printf("Situtation 1: Using one block with 1 thread \n");
         printf("Situtation 2: Using one block with 256 threads \n");
         printf("Situtation 3: Using multiple blocks etc... \n");
@@ -53,34 +53,14 @@ int main(int argc, char* argv[]) {
     else {
         sscanf(argv[1], "%d", &K);
         sscanf(argv[2], "%d", &situation);
-        if (K == 1){
-            K_million = 1000192;
-        }
-        else if (K == 5){
-            K_million = 5000192;
-        }
-        else if (K==10){
-            K_million = 10000128;
-        }
-        else if (K==50){
-            K_million = 50000128;
-        }
-        else if (K==100){
-            K_million = 100000000;
-        }
-        else{
-            printf("Error: K must be 1, 5, 10, 50 or 100.\n");
-            exit(0);
-        }
     }  
 
-
-    if(K_million % 256 != 0){
+    if(K % 256 != 0){
      printf("Error: K*1 000 000 must be multiple of 256.\n");
      exit(0);
     }
     // defining Grid and Block width by situation
-    
+    K_million = K;
     if (situation == 1){
         BlockWidth = 1;
         GridWidth = 1;
@@ -89,7 +69,7 @@ int main(int argc, char* argv[]) {
     else if (situation == 2){
         BlockWidth = 1;
         GridWidth = 256;
-        ValuesPerThread = K_million/256;
+        ValuesPerThread = K_million / 256;
     }
     else if (situation == 3){
         BlockWidth = K_million / 256;

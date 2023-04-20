@@ -112,6 +112,7 @@ __global__ void ConvKernelTiled(const Matrix input_matrix, const Matrix* filters
 }
 
 Matrix createDeviceMatrix(const Matrix M, bool copy){
+  // Create a new matrix in device memory.
   Matrix newDeviceMatrix;
   newDeviceMatrix.channels = M.channels;
   newDeviceMatrix.height = M.height;
@@ -125,7 +126,7 @@ Matrix createDeviceMatrix(const Matrix M, bool copy){
   return newDeviceMatrix;
 }
 
-// Create a new matrix in device memory.
+// Create filters in device memory.
 Matrix* createDeviceFilters(const Matrix* filters, bool copy){
   Matrix* newDeviceFilters;
   cudaMallocManaged((void**) &newDeviceFilters, K * sizeof(Matrix));
@@ -137,7 +138,7 @@ Matrix* createDeviceFilters(const Matrix* filters, bool copy){
   return newDeviceFilters;
 }
 
-// Create a matrix in host memory.
+// Create matrix in host memory.
 Matrix createHostMatrix(int channels, int height, int width){
   Matrix newHostMatrix;
   newHostMatrix.channels = channels;
