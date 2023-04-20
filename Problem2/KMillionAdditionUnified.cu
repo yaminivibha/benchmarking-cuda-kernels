@@ -28,6 +28,12 @@ float* d_C;
 // Variables for grid and block width
 int GridWidth;
 int BlockWidth;
+int ValuesPerThread; // number of values per thread
+
+// Variables for input parameters, situation, K and K_million
+int K; // multiple of millions
+double K_million; // vector size
+int situation; // situation number
 
 // Utility Functions
 void Cleanup(bool);
@@ -35,11 +41,6 @@ void checkCUDAError(const char *msg);
 
 // Host code performs setup and calls the kernel.
 int main(int argc, char* argv[]) {
-    int K; // multiple of millions
-    double K_million; // vector size
-    int situation; // situation number
-    int ValuesPerThread; // number of values per thread
-
     // Parse arguments.
     if (argc != 3) {
         printf("Usage: %s <K> <Situation> \n", argv[0]);

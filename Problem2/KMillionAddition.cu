@@ -31,16 +31,17 @@ float* d_C;
 int GridWidth;
 int BlockWidth;
 int ValuesPerThread;
+
+// Variables for input parameters, situation, K and K_million
+int K; // multiple of millions
+double K_million; // vector size
+int situation; // situation number
 // Utility Functions
 void Cleanup(bool);
 void checkCUDAError(const char *msg);
 
 // Host code performs setup and calls the kernel.
 int main(int argc, char* argv[]) {
-    int K; // multiple of millions
-    double K_million; // vector size
-    int situation; // situation number
-
     // Parse arguments.
     if (argc != 3) {
         printf("Usage: %s <K> <Situation> \n", argv[0]);
@@ -125,7 +126,13 @@ int main(int argc, char* argv[]) {
      h_A[i] = (float)i;
      h_B[i] = (float)(K_million-i);   
     }    
-    
+
+    // Copy host vectors h_A and h_B to device vectores d_A and d_B
+    error = cudaMemcpy(d_A, h_A, size, cudaMemcpyHostToDevice);
+    if (error != cudaSuccess) Cleanup(false);
+    error = cudaMemcpy(d_B, h_B, size, cudaMemcpyHostToDevice);
+    if (error != cudaSuccess) Cleanup(false);
+
     // Warm up
     AddVectors<<<dimGrid, dimBlock>>>(d_A, d_B, d_C, ValuesPerThread);
     error = cudaGetLastError();
