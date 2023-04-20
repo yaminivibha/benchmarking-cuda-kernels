@@ -1,171 +1,186 @@
+
 ///
-/// KMillionAddition.cu
+/// vecadd.cu
 /// For COMS E6998 Spring 2023
 /// Instructor: Parajit Dube and Kaoutar El Maghraoui
 /// Based on code from the CUDA Programming Guide
-/// Created: 2023-04-17
-/// Yamini Ananth
-/// Perform a simple convolution in CUDA
-/// 3x3
+/// Modified by Wim Bohm and David Newman
+/// Created: 2011-02-03
+/// Last Modified: 2011-03-03 DVN
+///
+/// Add two Vectors A and B in C on GPU using
+/// a kernel defined according to vecAddKernel.h
+/// Students must not modify this file. The GTA
+/// will grade your submission using an unmodified
+/// copy of this file.
+/// 
 
 // Includes
 #include <stdio.h>
-#include <stdlib.h>
 #include "timer.h"
+#include "vecaddKernel.h"
 
 // Defines
-#define epsilon (float)1e-4
-#define verbose 0
+#define GridWidth 60
+#define BlockWidth 128
 
-#define H 1024
-#define W 1024
-#define C 3
-#define FW 3
-#define FH 3
-#define P 1
-#define K 64
+// Variables for host and device vectors.
+float* h_A; 
+float* h_B; 
+float* h_C; 
+float* d_A; 
+float* d_B; 
+float* d_C; 
 
-typedef struct {
-    int c;
-    int width;
-    int height;
-    int stride;
-    double* elements;
-} Tensor;
+// Utility Functions
+void Cleanup(bool);
+void checkCUDAError(const char *msg);
 
-Tensor MakeDeviceTensor(Tensor M, bool copy){
-  // Create a new matrix in device memory.
-  Tensor newDeviceTensor;
-  newDeviceTensor.c = M.c;
-  newDeviceTensor.width = M.width;
-  newDeviceTensor.stride = M.width;
-  newDeviceTensor.height = M.height;
-  size_t size = M.c * M.width * M.height * sizeof(double);
-  double* elements;
-  cudaMalloc((void**) &newDeviceTensor.elements, size);
-  if (copy)
-    cudaMemcpy(newDeviceTensor.elements, M.elements, size, cudaMemcpyHostToDevice);
-  return newDeviceTensor;
-}
+// Host code performs setup and calls the kernel.
+int main(int argc, char** argv)
+{
+    int ValuesPerThread; // number of values per thread
+    int N; //Vector size
 
-// Create a tensor in host memory.
-Tensor MakeHostTensor(int c, int h, int w){
-    Tensor newHostTensor;
-    newHostTensor.c = c;
-    newHostTensor.width = w;
-    newHostTensor.height = h;
-    size_t size = c * h * w * sizeof(double);
-    newHostTensor.elements = (double*)malloc(size);
-    return newHostTensor;
-}
+	// Parse arguments.
+    if(argc != 2){
+     printf("Usage: %s ValuesPerThread\n", argv[0]);
+     printf("ValuesPerThread is the number of values added by each thread.\n");
+     printf("Total vector size is 128 * 60 * this value.\n");
+     exit(0);
+    } else {
+      sscanf(argv[1], "%d", &ValuesPerThread);
+    }      
 
-void Convo(const Tensor I0, Tensor O){
-  Tensor device_I0 = MakeDeviceTensor(I0, true);
-  Tensor host_O = MakeHostTensor(K, W, H);
-  Tensor device_O = MakeDeviceTensor(host_O, false);
+    // Determine the number of threads .
+    // N is the total number of values to be in a vector
+    N = ValuesPerThread * GridWidth * BlockWidth;
+    printf("Total vector size: %d\n", N); 
+    // size_t is the total number of bytes for a vector.
+    size_t size = N * sizeof(float);
 
-  // Define grid topology
-  dim3 dimBlock(16, 16);
-  dim3 dimGrid((W/16, H/16));
+    // Tell CUDA how big to make the grid and thread blocks.
+    // Since this is a vector addition problem,
+    // grid and thread block are both one-dimensional.
+    dim3 dimGrid(GridWidth);                    
+    dim3 dimBlock(BlockWidth);                 
 
-  cudaThreadSynchronize();
+    // Allocate input vectors h_A and h_B in host memory
+    h_A = (float*)malloc(size);
+    if (h_A == 0) Cleanup(false);
+    h_B = (float*)malloc(size);
+    if (h_B == 0) Cleanup(false);
+    h_C = (float*)malloc(size);
+    if (h_C == 0) Cleanup(false);
 
-  // Set up timer
+    // Allocate vectors in device memory.
+    cudaError_t error;
+    error = cudaMalloc((void**)&d_A, size);
+    if (error != cudaSuccess) Cleanup(false);
+    error = cudaMalloc((void**)&d_B, size);
+    if (error != cudaSuccess) Cleanup(false);
+    error = cudaMalloc((void**)&d_C, size);
+    if (error != cudaSuccess) Cleanup(false);
 
-  initialize_timer();
-  start_timer();
-  double time = elapsed_time();
-
-  convolution<<dimGrid, dimBlock>>(I0, O);
-  cudaThreadSynchronize();
-
-  printf("Standard convolution");
-  
-  cudaMemcpy(host_O, device_O, K*H*W * sizeof(double), cudaMemcpyDeviceToHost);
-  stop_timer();
-  double time = elapsed_time();
-  printf("Checksum: %d", checksum(host_O));
-  printf( "Time: %lf (sec)", time);
-}
-
-
-double checksum(Tensor T){
-  double cs = 0;
-  for(int i = 0; i < T.height * T.width * T.c; i++){
-    cs += T.elements[i];
-  }
-  return cs;
-}
-
-
-// Initialize dummy data in a tensor stored in host memory.
-void initTensor(Tensor T, bool horizontal) {
-  for(int z=0; z < T.c; z++){
-    for(int y=0; y<T.height; y++) {
-      for(int x=0; x<T.width; x++) {
-        T.elements[z*T.height*T.width + y*T.width + x] = z * (x+y);
-      }
+    // Initialize host vectors h_A and h_B
+    int i;
+    for(i=0; i<N; ++i){
+     h_A[i] = (float)i;
+     h_B[i] = (float)(N-i);   
     }
-  }
-}
 
-// Initialize dummy data in a tensor stored in host memory.
-void initTensorPadded(Tensor T) {
-  for(int z=0; z < T.c; z++){
-    for(int y=0; y<T.height; y++) {
-      for(int x=0; x<T.width; x++) {
-        if(x == 0 || y == 0 || x == T.width-1 || y == T.height-1){
-          T.elements[z*T.height * T.width + y*T.width + x] = 0;
-        }
-        else{
-          T.elements[z*T.height*T.width + y*T.width + x] = z * (x+y);
-        }
-      }
+    // Copy host vectors h_A and h_B to device vectores d_A and d_B
+    error = cudaMemcpy(d_A, h_A, size, cudaMemcpyHostToDevice);
+    if (error != cudaSuccess) Cleanup(false);
+    error = cudaMemcpy(d_B, h_B, size, cudaMemcpyHostToDevice);
+    if (error != cudaSuccess) Cleanup(false);
+
+    // Warm up
+    AddVectors<<<dimGrid, dimBlock>>>(d_A, d_B, d_C, ValuesPerThread);
+    error = cudaGetLastError();
+    if (error != cudaSuccess) Cleanup(false);
+    cudaDeviceSynchronize();
+
+    // Initialize timer  
+    initialize_timer();
+    start_timer();
+
+    // Invoke kernel
+    AddVectors<<<dimGrid, dimBlock>>>(d_A, d_B, d_C, ValuesPerThread);
+    error = cudaGetLastError();
+    if (error != cudaSuccess) Cleanup(false);
+    cudaDeviceSynchronize();
+
+    // Compute elapsed time 
+    stop_timer();
+    double time = elapsed_time();
+
+    // Compute floating point operations per second.
+    int nFlops = N;
+    double nFlopsPerSec = nFlops/time;
+    double nGFlopsPerSec = nFlopsPerSec*1e-9;
+
+	// Compute transfer rates.
+    int nBytes = 3*4*N; // 2N words in, 1N word out
+    double nBytesPerSec = nBytes/time;
+    double nGBytesPerSec = nBytesPerSec*1e-9;
+
+	// Report timing data.
+    printf( "Time: %lf (sec), GFlopsS: %lf, GBytesS: %lf\n", 
+             time, nGFlopsPerSec, nGBytesPerSec);
+     
+    // Copy result from device memory to host memory
+    error = cudaMemcpy(h_C, d_C, size, cudaMemcpyDeviceToHost);
+    if (error != cudaSuccess) Cleanup(false);
+
+    // Verify & report result
+    for (i = 0; i < N; ++i) {
+        float val = h_C[i];
+        if (fabs(val - N) > 1e-5)
+            break;
     }
-  }
+    printf("Test %s \n", (i == N) ? "PASSED" : "FAILED");
+
+    // Clean up and exit.
+    Cleanup(true);
 }
 
-__global__ void convolution(Tensor I0, Tensor O){
-  int thread_col = threadIdx.x + blockIdx.x + blockDim.x;
-  int thread_row = threadIdx.y + blockIdx.y + blockDim.y;
+void Cleanup(bool noError) {  // simplified version from CUDA SDK
+    cudaError_t error;
+        
+    // Free device vectors
+    if (d_A)
+        cudaFree(d_A);
+    if (d_B)
+        cudaFree(d_B);
+    if (d_C)
+        cudaFree(d_C);
 
-  double *Oadd = &O.elements;
+    // Free host memory
+    if (h_A)
+        free(h_A);
+    if (h_B)
+        free(h_B);
+    if (h_C)
+        free(h_C);
+        
+    error = cudaDeviceReset();
+    
+    if (!noError || error != cudaSuccess)
+        printf("cuda malloc or cuda thread exit failed \n");
+    
+    fflush( stdout);
+    fflush( stderr);
 
-  if(thread_row < H && thread_col < W){
-    for(int k = 0; i<K; i++){
-      double o = 0;
-      for(int c = 0; c < C; ++c){
-        for(int i = 0; i<FH; ++i){
-          for(int j = 0; j<FW; ++j){
-            if(thread_col + j < W+2 && thread_row + i < H+2){
-              o += (k+c)*(FW-1-i + FH-1-j) * I0.elements[c * I0.width * I0.height + (thread_row + i) * I0.width + thread_col + j];
-            }
-          }
-        }
-      }
-      Oadd[k*W*H + thread_row*W + thread_col] = o;
-    }
-  }
+    exit(0);
 }
 
-int main() {
-
-  // Grid dimension
-  int num_blocks;
-  // Matrix dimensions in multiples of FOOTPRINT_SIZE
-  // Matrices will be of size data_size * data_size
-  int data_size;
-
-  // Create matrices in host.
-  Tensor host_I0 = MakeHostTensor(C, H+2, W+2);
-  initTensorPadded(host_I0);
-  Tensor host_O = MakeHostTensor(K, W, H);
-
-
-  // Initialize values in host A and B
-  
-  Convo(host_I0,host_O);
-
+void checkCUDAError(const char *msg)
+{
+  cudaError_t err = cudaGetLastError();
+  if( cudaSuccess != err) 
+    {
+      fprintf(stderr, "Cuda error: %s: %s.\n", msg, cudaGetErrorString(err) );
+      exit(-1);
+    }                         
 }
-  
-

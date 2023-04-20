@@ -164,7 +164,7 @@ int main(int argc, char* argv[]) {
     error = cudaMemcpy(h_C, d_C, size, cudaMemcpyDeviceToHost);
     if (error != cudaSuccess) Cleanup(false);
 
-    print("K_Million: %f", K_million);
+    printf("Vector size: %f\n", K_million);
     // Verify & report result
     for (i = 0; i < K_million; ++i) {
         float val = h_C[i];
