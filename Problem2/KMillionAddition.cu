@@ -74,12 +74,7 @@ int main(int argc, char* argv[]) {
         }
     }  
 
-    if(K_million % 256 != 0){
-     printf("Error: K*1 000 000 must be multiple of 256.\n");
-     exit(0);
-    }
     // defining Grid and Block width by situation
-    
     if (situation == 1){
         BlockWidth = 1;
         GridWidth = 1;
@@ -169,7 +164,7 @@ int main(int argc, char* argv[]) {
     error = cudaMemcpy(h_C, d_C, size, cudaMemcpyDeviceToHost);
     if (error != cudaSuccess) Cleanup(false);
 
-    print("K_Million: ")
+    print("K_Million: %f", K_million);
     // Verify & report result
     for (i = 0; i < K_million; ++i) {
         float val = h_C[i];
