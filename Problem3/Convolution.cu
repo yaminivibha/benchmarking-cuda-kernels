@@ -15,8 +15,6 @@
 #include "convKernel.h"
 
 // Defines
-#define epsilon (float)1e-4
-#define verbose 0
 #define C 3
 #define H 1024
 #define W 1024
@@ -194,14 +192,14 @@ void Conv(const Matrix input_matrix, const Matrix* filters, Matrix result){
   Matrix* filters_device = createDeviceFilters(filters, true);
   Matrix result_device = createDeviceMatrix(result, false);
 
-  // Define grid topology
+  // Set up grid
   dim3 dimBlock(K);
   dim3 dimGrid(H, W);
 
   // Warm-up
   ConvKernel<<<dimGrid, dimBlock>>>(input_matrix_device, filters_device, result_device);
 
-  // Synchronize to make sure everyone is done in the warmup.
+  // Synchronize
   cudaThreadSynchronize();
 
   // Set up timer
@@ -214,12 +212,15 @@ void Conv(const Matrix input_matrix, const Matrix* filters, Matrix result){
   //synchronization
   cudaThreadSynchronize() ;
 
+  // Stop timer
   stop_timer();
   double time = elapsed_time();
-  printf("C1");
+  printf("C1\n");
+  
+  // Compute checksum and print time
   double checksum;
   checksum = checkSum(result);
-  printf( "Checksum: %lf Time: %lf (sec)\n", time);
+  printf( "Checksum: %f Time: %f (sec)\n", checksum, time);
 
   // Copy the result to the host memory from device memory
   size_t size = result.channels * result.height * result.width * sizeof(double);
@@ -242,11 +243,11 @@ void ConvTiled(const Matrix input_matrix, const Matrix* filters, Matrix result){
   Matrix* filters_device = createDeviceFilters(filters, true);
   Matrix result_device = createDeviceMatrix(result, false);
 
-  // Define grid topology
+  // Set up grid
   dim3 dimBlock(OUT_FOOTPRINT + 2 * P, OUT_FOOTPRINT + 2 * P);
   dim3 dimGrid(H / OUT_FOOTPRINT, W / OUT_FOOTPRINT, K);
 
-  // Invoke kernel for warm up
+  // Warm up
   ConvKernelTiled<<<dimGrid, dimBlock>>>(input_matrix_device, filters_device, result_device);
 
   // Synchronize to make sure everyone is done in the warmup.
@@ -256,21 +257,23 @@ void ConvTiled(const Matrix input_matrix, const Matrix* filters, Matrix result){
   initialize_timer();
   start_timer();
 
-  // Invoke kernel
+  // True computation
   ConvKernelTiled<<<dimGrid, dimBlock>>>(input_matrix_device, filters_device, result_device);
  
-  // Synchronize to make sure everyone is done.
+  // Synchronize 
   cudaThreadSynchronize() ;
 
-  // Compute and report the timing results
-
+  // Stop timer
   stop_timer();
   double time = elapsed_time();
 
+  // printing checksum and time
   printf("C2\n");
   double checksum;
   checksum = checkSum(result);
-  printf( "Checksum: %f Time: %lf (sec)\n", checksum, time);
+  printf( "Checksum: %f Time: %f (sec)\n", checksum, time);
+  
+  // Copy the result to the host memory from device memory
   size_t size = result.channels * result.height * result.width * sizeof(double);
   cudaMemcpy(result.elements, result_device.elements, size, cudaMemcpyDeviceToHost);
 
