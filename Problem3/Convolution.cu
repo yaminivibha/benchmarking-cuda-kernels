@@ -188,9 +188,6 @@ Matrix* createFilterMatrices() {
 
 // Compute and check the checksum of the result matrix
 double checkSum(Matrix M) {
-
-  // expected result
-  double checksum = 122756344698240;
   // actual result
   double checksum_computed = 0;
   
@@ -239,7 +236,7 @@ void Conv(const Matrix input_matrix, const Matrix* filters, Matrix result){
   
   // Compute checksum and print time
   double checksum;
-  checksum = checkSum(result);
+  checksum = checkSum(result_device);
   printf( "Checksum: %f Time: %f (sec)\n", checksum, time);
 
   // Copy the result to the host memory from device memory
