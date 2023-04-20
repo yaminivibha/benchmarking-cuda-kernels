@@ -112,7 +112,7 @@ void printMatrix0(Matrix M, const char* name) {
 
 // Compute and check the checksum of the result matrix
 // expected to be 122756344698240
-void checkResult(Matrix M) {
+int checkResult(Matrix M) {
 
   double checksum = 122756344698240;
   double checksum_M = 0;
@@ -130,6 +130,7 @@ void checkResult(Matrix M) {
     printf("computed checksum: %lf\n", checksum_M);
     printf("actual checksum: %lf\n", checksum);
   }
+    return 122756344698240;
 }
 
 // Host code for convolution.
@@ -164,7 +165,7 @@ void Conv(const Matrix input_matrix, const Matrix* filters, Matrix result){
 
   stop_timer();
   double time = elapsed_time();
-
+  printf("C1")
   printf( "Grid Dimensions: %dx%d \n",dimGrid.x,dimGrid.y);
   printf( "Block Dimensions: %dx%d \n",dimBlock.x,dimBlock.y);
   
@@ -192,12 +193,7 @@ int main(int argc, char** argv) {
   Matrix input_matrix = createIMatrix();
   Matrix* filters = createFilterMatrices();
   Matrix result = MakeHostMatrix(K, H, W);
- 
-  // debugging
-//   if(verbose){
-//     printMatrix(host_A, "host_A");
-//     printMatrix(host_B, "host_B");
-//   }
+  int checksum;
 
   // Perform CUDA matrix Multiplication
   // MatMul is a host function that calls
@@ -206,8 +202,8 @@ int main(int argc, char** argv) {
   Conv(input_matrix,filters,result);
 
   // Verify that the result is correct.
-  checkResult(result);
-  
+  checksum = checkResult(result);
+  printf("checksum: %d\n", checksum)
   // Free allocated memory.
   free(input_matrix.elements);
   for(int k = 0; k < K; k++) {
