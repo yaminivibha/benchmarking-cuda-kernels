@@ -117,7 +117,6 @@ Matrix* createDeviceFilters(const Matrix* filters, bool copy){
         newDeviceFilters[k] = createDeviceMatrix(filters[k], copy);
     }
   }
-  
   return newDeviceFilters;
 }
 
@@ -296,7 +295,7 @@ int main() {
   // the device kernel MatMulKernel and
   // times its performance.
   Conv(input_matrix,filters,result);
-  
+  ConvTiled(input_matrix,filters,result);
   // Free allocated memory.
   free(input_matrix.elements);
   for(int k = 0; k < K; k++) {
