@@ -37,8 +37,6 @@ typedef struct {
   int channels;
   int height;
   int width;
-  int stride_channel;
-  int stride_height;
   double* elements;
 } Matrix;
 
@@ -53,19 +51,18 @@ __global__ void ConvKernel(const Matrix input_matrix, const Matrix* filters, Mat
   int y = blockIdx.y;
   int k = threadIdx.x;
   Matrix filter = filters[k];
-
   double result_val = 0;
   // Convolution
   // for each channel, do convolution. Convolution defined as sum of element-wise multiplication of filter and input matrix
   for(int c = 0; c < C; c++) {
     for(int j = 0; j < FH; j++) {
       for(int i = 0; i < FW; i++) {
-        result_val += filter.elements[c * filter.stride_channel + (FH - 1 - i) * filter.stride_height + (FW - 1 - j)] * input_matrix.elements[c * input_matrix.stride_channel + (x + i) * input_matrix.stride_height + (y + j)];
+        result_val += filter.elements[c * filter.height * filter.width + (FH - 1 - i) * filter.width + (FW - 1 - j)] * input_matrix.elements[c * input_matrix.height * input_matrix.width + (x + i) * input_matrix.width + (y + j)];
       }
     }
   }
     // Indexing into the result
-  result.elements[k * result.stride_channel + x * result.stride_height + y] = result_val;
+  result.elements[k * result.height * result.width + x * result.width + y] = result_val;
 }
 
 __global__ void ConvKernelTiled(const Matrix input_matrix, const Matrix* filters, Matrix result){
@@ -78,8 +75,8 @@ __global__ void ConvKernelTiled(const Matrix input_matrix, const Matrix* filters
 
   Matrix filter = filters[k];
 
-  double* resultSub = &result.elements[BlockRow * OUT_FOOTPRINT * result.stride_height + BlockCol * OUT_FOOTPRINT];
-  double* input_matrixSub = &input_matrix.elements[BlockRow * OUT_FOOTPRINT * input_matrix.stride_height + BlockCol * OUT_FOOTPRINT];
+  double* resultSub = &result.elements[BlockRow * OUT_FOOTPRINT * result.width + BlockCol * OUT_FOOTPRINT];
+  double* input_matrixSub = &input_matrix.elements[BlockRow * OUT_FOOTPRINT * input_matrix.width + BlockCol * OUT_FOOTPRINT];
   
   // Shared memory for input matrix
   __shared__ double shared_input_matrix[C][OUT_FOOTPRINT + 2 * P][OUT_FOOTPRINT + 2 * P];
@@ -87,7 +84,7 @@ __global__ void ConvKernelTiled(const Matrix input_matrix, const Matrix* filters
   // Load input matrix into shared memory
   #pragma unroll
   for(int c = 0; c < C; c++) {
-    shared_input_matrix[c][x][y] = input_matrixSub[c * input_matrix.stride_channel + x * input_matrix.stride_height + y];
+    shared_input_matrix[c][x][y] = input_matrixSub[c * input_matrix.input_matrix.height * input_matrix.width + x * input_matrix.width + y];
   }
   // synchronize to make sure the matrix is loaded
   __syncthreads();
@@ -103,12 +100,12 @@ __global__ void ConvKernelTiled(const Matrix input_matrix, const Matrix* filters
   for(int c = 0; c < C; c++) {
     for(int j = 0; j < FH; j++) {
       for(int i = 0; i < FW; i++) {
-        result_val += filter.elements[c * filter.stride_channel + (FH - 1 - i) * filter.stride_height + (FW - 1 - j)] * shared_input_matrix[c][new_x + i][new_y + j];
+        result_val += filter.elements[c * filter.height * filter.width + (FH - 1 - i) * filter.width + (FW - 1 - j)] * shared_input_matrix[c][new_x + i][new_y + j];
       }
     }
   }
   // store the result
-  resultSub[k * result.stride_channel + new_x * result.stride_height + new_y] = result_val;
+  resultSub[k * result.height * result.width + new_x * result.width + new_y] = result_val;
 }
 
 Matrix createDeviceMatrix(const Matrix M, bool copy){
@@ -117,8 +114,6 @@ Matrix createDeviceMatrix(const Matrix M, bool copy){
   newDeviceMatrix.channels = M.channels;
   newDeviceMatrix.height = M.height;
   newDeviceMatrix.width = M.width;
-  newDeviceMatrix.stride_channel = M.stride_channel;
-  newDeviceMatrix.stride_height = M.stride_height;
   size_t size = M.channels * M.height * M.width * sizeof(double);
   cudaMallocManaged((void**) &newDeviceMatrix.elements, size);
   if (copy)
@@ -144,8 +139,6 @@ Matrix createHostMatrix(int channels, int height, int width){
   newHostMatrix.channels = channels;
   newHostMatrix.height = height;
   newHostMatrix.width = width;
-  newHostMatrix.stride_channel = newHostMatrix.height * newHostMatrix.width;
-  newHostMatrix.stride_height = newHostMatrix.width;
   size_t size = newHostMatrix.channels * newHostMatrix.height * newHostMatrix.width * sizeof(double);
   newHostMatrix.elements = (double*)malloc(size);
   return newHostMatrix;
@@ -158,10 +151,10 @@ Matrix createIMatrix() {
     for(int h = 0; h < input_matrix.height; h++) {
         for(int w = 0; w < input_matrix.width; w++) {
             if(h == 0 || h == input_matrix.height - 1 || w == 0 || w == input_matrix.width - 1) {
-                input_matrix.elements[c * input_matrix.stride_channel + h * input_matrix.stride_height + w] = 0;
+                input_matrix.elements[c * input_matrix.height * input_matrix.width + h * input_matrix.width + w] = 0;
             }
             else {
-                input_matrix.elements[c * input_matrix.stride_channel + h * input_matrix.stride_height + w] = c * ((h - P) + (w - P));
+                input_matrix.elements[c * input_matrix.height * input_matrix.width + h * input_matrix.width + w] = c * ((h - P) + (w - P));
             }
         }
     }
@@ -177,7 +170,7 @@ Matrix* createFilterMatrices() {
     for(int c = 0; c < filter.channels; c++) {
         for(int h = 0; h < filter.height; h++) {
             for(int w = 0; w < filter.width; w++) {
-                filter.elements[c * filter.stride_channel + h * filter.stride_height + w] = (c + k) * (h + w);
+                filter.elements[c * filter.height * filter.width + h * filter.width + w] = (c + k) * (h + w);
             }
         }
     }
@@ -194,7 +187,7 @@ double checkSum(Matrix M) {
   for(int k = 0; k < K; k++) {
     for(int h = 0; h < M.height; h++) {
         for(int w = 0; w < M.width; w++) {
-            checksum_computed += M.elements[k * M.stride_channel + h * M.stride_height + w];
+            checksum_computed += M.elements[k * M.height * M.width + h * M.width + w];
         }
     }
   }
