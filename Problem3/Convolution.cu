@@ -30,6 +30,9 @@
 #define P 1
 #define OUT_FOOTPRINT 16
 
+// function declaration
+double checkSum(Matrix M);
+
 Matrix MakeDeviceMatrix(const Matrix M, bool copy){
   // Create a new matrix in device memory.
   Matrix newDeviceMatrix;
@@ -107,7 +110,7 @@ Matrix* createFilterMatrices() {
 }
 
 // Compute and check the checksum of the result matrix
-double checkResult(Matrix M) {
+double checkSum(Matrix M) {
 
   // expected result
   double checksum = 122756344698240;
@@ -162,10 +165,11 @@ void Conv(const Matrix input_matrix, const Matrix* filters, Matrix result){
   stop_timer();
   double time = elapsed_time();
   printf("C1");
-  printf( "Grid Dimensions: %dx%d \n",dimGrid.x,dimGrid.y);
-  printf( "Block Dimensions: %dx%d \n",dimBlock.x,dimBlock.y);
-  
-  printf( "Time: %lf (sec)\n", time);
+  //printf( "Grid Dimensions: %dx%d \n",dimGrid.x,dimGrid.y);
+  //printf( "Block Dimensions: %dx%d \n",dimBlock.x,dimBlock.y);
+  double checksum;
+  checksum = checkSum(result);
+  printf( "Checksum: %lf Time: %lf (sec)\n", time);
 
   // Copy the result to the host memory from device memory
   size_t size = result.channels * result.height * result.width * sizeof(double);
@@ -187,17 +191,13 @@ int main() {
   Matrix input_matrix = createIMatrix();
   Matrix* filters = createFilterMatrices();
   Matrix result = MakeHostMatrix(K, H, W);
-  double checksum;
 
   // Perform CUDA matrix Multiplication
   // MatMul is a host function that calls
   // the device kernel MatMulKernel and
   // times its performance.
   Conv(input_matrix,filters,result);
-
-  // Verify that the result is correct.
-  checksum = checkResult(result);
-  printf("checksum: %lf\n", checksum);
+  
   // Free allocated memory.
   free(input_matrix.elements);
   for(int k = 0; k < K; k++) {
