@@ -53,7 +53,25 @@ int main(int argc, char* argv[]) {
     else {
         sscanf(argv[1], "%d", &K);
         sscanf(argv[2], "%d", &situation);
-        K_million = K * 1000000; 
+        if (K == 1){
+            K_million = 1000192;
+        }
+        else if (K == 5){
+            K_million = 5000192;
+        }
+        else if (K==10){
+            K_million = 10000128;
+        }
+        else if (K==50){
+            K_million = 50000128;
+        }
+        else if (K==100){
+            K_million = 100000000;
+        }
+        else{
+            printf("Error: K must be 1, 5, 10, 50 or 100.\n");
+            exit(0);
+        }
     }  
 
 
