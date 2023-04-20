@@ -26,6 +26,7 @@
 
 #ifndef __MMKERNEL__
 #define __MMKERNEL__
+#endif
 
 #ifndef FOOTPRINT_SIZE
 #define FOOTPRINT_SIZE BLOCK_SIZE
