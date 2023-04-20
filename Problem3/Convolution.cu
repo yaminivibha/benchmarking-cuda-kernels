@@ -22,6 +22,25 @@
 #define FW 3
 #define P 1
 #define OUT_FOOTPRINT 16
+#define BLOCK_SIZE 16
+
+#ifndef __MMKERNEL__
+#define __MMKERNEL__
+
+#ifndef FOOTPRINT_SIZE
+#define FOOTPRINT_SIZE BLOCK_SIZE
+#endif
+
+// Matrix Structure declaration
+typedef struct {
+  int channels;
+  int height;
+  int width;
+  int stride_channel;
+  int stride_height;
+  double* elements;
+} Matrix;
+
 
 // function declaration
 double checkSum(Matrix M);

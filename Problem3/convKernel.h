@@ -20,14 +20,6 @@
 #endif
 
 // Creating a struct to hold the matrix data
-typedef struct {
-  int channels;
-  int height;
-  int width;
-  int stride_channel;
-  int stride_height;
-  double* elements;
-} Matrix;
 
 // Forward declaration of the kernel function that performs the work.
 __global__ void ConvKernel(const Matrix, const Matrix*, Matrix);
