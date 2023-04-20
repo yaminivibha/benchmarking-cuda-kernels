@@ -32,7 +32,13 @@
 #define FOOTPRINT_SIZE BLOCK_SIZE
 #endif
 
+// function declaration for CheckSum
+double checkSum(Matrix M);
+
 // Matrix Structure declaration
+// Matrices have 3 channels (by default)
+// height = y
+// width = x
 typedef struct {
   int channels;
   int height;
@@ -40,9 +46,64 @@ typedef struct {
   double* elements;
 } Matrix;
 
+int main() {
 
-// function declaration
-double checkSum(Matrix M);
+  // Create matrices in host.
+  Matrix input = createInputMatrix();
+  Matrix* filters = createFilterMatrices();
+  Matrix result = createHostMatrix(K, H, W);
+
+  // Part C1
+  Conv(input, filters, result);
+  
+  // Part C2
+  ConvTiled(input, filters, result);
+  
+  // Free allocated memory.
+  free(input.elements);
+  for(int k = 0; k < K; k++) {
+    free(filters[k].elements);
+  }
+  free(filters);
+  free(result.elements);
+}
+
+// Create input matrix stored in host memory.
+Matrix createInputMatrix() {
+  Matrix input_matrix = createHostMatrix(C, H + 2 * P, W + 2 * P);
+  for(int c = 0; c < input_matrix.channels; c++) {
+    for(int h = 0; h < input_matrix.height; h++) {
+        for(int w = 0; w < input_matrix.width; w++) {
+            if(h == 0 || h == input_matrix.height - 1 || w == 0 || w == input_matrix.width - 1) {
+              // set the border to 0 (padding)
+                input_matrix.elements[c * input_matrix.height * input_matrix.width + h * input_matrix.width + w] = 0;
+            }
+            else {
+              // set the rest of the matrix to c * (h + w)
+                input_matrix.elements[c * input_matrix.height * input_matrix.width + h * input_matrix.width + w] = c * ((h - P) + (w - P));
+            }
+        }
+    }
+  }
+  return input_matrix;
+}
+
+// Create all K filter matrices on host
+Matrix* createFilterMatrices() {
+  Matrix* filters = (Matrix*) malloc(K * sizeof(Matrix));
+  for(int k = 0; k < K; k++) {
+    Matrix filter = createHostMatrix(C, FH, FW);
+    for(int c = 0; c < filter.channels; c++) {
+        for(int h = 0; h < filter.height; h++) {
+            for(int w = 0; w < filter.width; w++) {
+                filter.elements[c * filter.height * filter.width + h * filter.width + w] = (c + k) * (h + w);
+            }
+        }
+    }
+    filters[k] = filter;
+  }
+  return filters;
+}
 
 __global__ void ConvKernel(const Matrix input_matrix, const Matrix* filters, Matrix result){
   // total K * H * W threads
@@ -75,8 +136,8 @@ __global__ void ConvKernelTiled(const Matrix input_matrix, const Matrix* filters
 
   Matrix filter = filters[k];
 
-  double* resultSub = &result.elements[BlockRow * OUT_FOOTPRINT * result.width + BlockCol * OUT_FOOTPRINT];
-  double* input_matrixSub = &input_matrix.elements[BlockRow * OUT_FOOTPRINT * input_matrix.width + BlockCol * OUT_FOOTPRINT];
+  double* temp_result = &result.elements[BlockRow * OUT_FOOTPRINT * result.width + BlockCol * OUT_FOOTPRINT];
+  double* temp_input_matrix = &input_matrix.elements[BlockRow * OUT_FOOTPRINT * input_matrix.width + BlockCol * OUT_FOOTPRINT];
   
   // Shared memory for input matrix
   __shared__ double shared_input_matrix[C][OUT_FOOTPRINT + 2 * P][OUT_FOOTPRINT + 2 * P];
@@ -84,7 +145,7 @@ __global__ void ConvKernelTiled(const Matrix input_matrix, const Matrix* filters
   // Load input matrix into shared memory
   #pragma unroll
   for(int c = 0; c < C; c++) {
-    shared_input_matrix[c][x][y] = input_matrixSub[c * input_matrix.height * input_matrix.width + x * input_matrix.width + y];
+    shared_input_matrix[c][x][y] = temp_input_matrix[c * input_matrix.height * input_matrix.width + x * input_matrix.width + y];
   }
   // synchronize to make sure the matrix is loaded
   __syncthreads();
@@ -105,7 +166,7 @@ __global__ void ConvKernelTiled(const Matrix input_matrix, const Matrix* filters
     }
   }
   // store the result
-  resultSub[k * result.height * result.width + new_x * result.width + new_y] = result_val;
+  temp_result[k * result.height * result.width + new_x * result.width + new_y] = result_val;
 }
 
 Matrix createDeviceMatrix(const Matrix M, bool copy){
@@ -142,41 +203,6 @@ Matrix createHostMatrix(int channels, int height, int width){
   size_t size = newHostMatrix.channels * newHostMatrix.height * newHostMatrix.width * sizeof(double);
   newHostMatrix.elements = (double*)malloc(size);
   return newHostMatrix;
-}
-
-// Create input matrix stored in host memory.
-Matrix createIMatrix() {
-  Matrix input_matrix = createHostMatrix(C, H + 2 * P, W + 2 * P);
-  for(int c = 0; c < input_matrix.channels; c++) {
-    for(int h = 0; h < input_matrix.height; h++) {
-        for(int w = 0; w < input_matrix.width; w++) {
-            if(h == 0 || h == input_matrix.height - 1 || w == 0 || w == input_matrix.width - 1) {
-                input_matrix.elements[c * input_matrix.height * input_matrix.width + h * input_matrix.width + w] = 0;
-            }
-            else {
-                input_matrix.elements[c * input_matrix.height * input_matrix.width + h * input_matrix.width + w] = c * ((h - P) + (w - P));
-            }
-        }
-    }
-  }
-  return input_matrix;
-}
-
-// Create all K filter matrices on host
-Matrix* createFilterMatrices() {
-  Matrix* filters = (Matrix*) malloc(K * sizeof(Matrix));
-  for(int k = 0; k < K; k++) {
-    Matrix filter = createHostMatrix(C, FH, FW);
-    for(int c = 0; c < filter.channels; c++) {
-        for(int h = 0; h < filter.height; h++) {
-            for(int w = 0; w < filter.width; w++) {
-                filter.elements[c * filter.height * filter.width + h * filter.width + w] = (c + k) * (h + w);
-            }
-        }
-    }
-    filters[k] = filter;
-  }
-  return filters;
 }
 
 // Compute and check the checksum of the result matrix
@@ -296,24 +322,3 @@ void ConvTiled(const Matrix input_matrix, const Matrix* filters, Matrix result){
   cudaFree(result_device.elements);
 }
 
-int main() {
-
-  // Create matrices in host.
-  Matrix input_matrix = createIMatrix();
-  Matrix* filters = createFilterMatrices();
-  Matrix result = createHostMatrix(K, H, W);
-
-  // Perform CUDA matrix Multiplication
-  // MatMul is a host function that calls
-  // the device kernel MatMulKernel and
-  // times its performance.
-  Conv(input_matrix,filters,result);
-  ConvTiled(input_matrix,filters,result);
-  // Free allocated memory.
-  free(input_matrix.elements);
-  for(int k = 0; k < K; k++) {
-    free(filters[k].elements);
-  }
-  free(filters);
-  free(result.elements);
-}
